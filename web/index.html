@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InitControl - Gestione e Ottimizzazione Avvio Windows 11</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Hidden SVG for reusable gradients -->
+  <svg width="0" height="0" style="position: absolute;">
+    <defs>
+      <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#E8FFA8"/>
+        <stop offset="50%" stop-color="#D4F86A"/>
+        <stop offset="100%" stop-color="#9ED626"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <div class="app-container">
+    <!-- ==========================================
+         SIDEBAR NAVIGATION
+         ========================================== -->
+    <aside class="sidebar">
+      <div>
+        <div class="sidebar-header">
+          <div class="logo-box">
+            <img src="assets/logo.svg" alt="InitControl Logo">
+          </div>
+          <div class="app-title-group">
+            <h1>InitControl</h1>
+            <span class="app-version" id="sidebarVersion">v0.1.1</span>
+          </div>
+        </div>
+
+        <div class="sidebar-nav-wrapper">
+          <div>
+            <div class="nav-section-title">Navigazione</div>
+            <div class="nav-items">
+              <div class="nav-item active" data-view="dashboard">
+                <div class="nav-item-left">
+                  <span class="nav-icon">📊</span>
+                  <span>Dashboard</span>
+                </div>
+              </div>
+              <div class="nav-item" data-view="user-software">
+                <div class="nav-item-left">
+                  <span class="nav-icon">💻</span>
+                  <span>Software Utente</span>
+                </div>
+                <span class="nav-badge" id="badgeUserCount">0</span>
+              </div>
+              <div class="nav-item" data-view="system-processes">
+                <div class="nav-item-left">
+                  <span class="nav-icon">⚙️</span>
+                  <span>Processi & Servizi</span>
+                </div>
+                <span class="nav-badge" id="badgeSystemCount">0</span>
+              </div>
+              <div class="nav-item" data-view="scheduled-tasks">
+                <div class="nav-item-left">
+                  <span class="nav-icon">⏰</span>
+                  <span>Attività Pianificate</span>
+                </div>
+                <span class="nav-badge" id="badgeTaskCount">0</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="nav-section-title">Sistema & Sicurezza</div>
+            <div class="nav-items">
+              <div class="nav-item" data-view="risk-matrix">
+                <div class="nav-item-left">
+                  <span class="nav-icon">🚦</span>
+                  <span>Analisi di Rischio</span>
+                </div>
+              </div>
+              <div class="nav-item" data-view="deobfuscation">
+                <div class="nav-item-left">
+                  <span class="nav-icon">🔍</span>
+                  <span>De-Offuscamento</span>
+                </div>
+              </div>
+              <div class="nav-item" data-view="backup-tools">
+                <div class="nav-item-left">
+                  <span class="nav-icon">🛠️</span>
+                  <span>Strumenti & Backup</span>
+                </div>
+              </div>
+              <div class="nav-item" data-view="console-log">
+                <div class="nav-item-left">
+                  <span class="nav-icon">📟</span>
+                  <span>Console & Log</span>
+                </div>
+              </div>
+              <div class="nav-item" data-view="about-info">
+                <div class="nav-item-left">
+                  <span class="nav-icon">ℹ️</span>
+                  <span>Informazioni</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar Footer -->
+      <div class="sidebar-footer">
+        <div class="admin-status-pill" id="adminStatusPill">
+          <span class="status-dot"></span>
+          <span id="adminStatusText">Amministratore (Attivo)</span>
+        </div>
+        <div class="footer-actions">
+          <span>InitControl 2026</span>
+          <div>
+            <button class="icon-btn" id="btnThemeQuick" title="Cambia Tema (Scuro / Chiaro)">🌓</button>
+            <button class="icon-btn" id="btnRescanQuick" title="Ricarica scansione">🔄</button>
+            <button class="icon-btn" id="btnHelpQuick" title="Info">❓</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ==========================================
+         MAIN CONTENT AREA
+         ========================================== -->
+    <main class="main-wrapper">
+      <!-- Top App Header -->
+      <header class="top-header">
+        <div class="header-title-box">
+          <h2 id="topHeaderTitle">Dashboard</h2>
+          <p id="topHeaderSubtitle">Flusso di ottimizzazione e stato dell'avvio di sistema</p>
+        </div>
+        <div class="header-badges">
+          <div class="header-pill pill-active">
+            <span class="status-dot"></span>
+            <span>PC Idoneo per Ottimizzazione</span>
+          </div>
+          <div class="header-pill">
+            <span id="topWinVersion">Windows 11 x64</span>
+          </div>
+          <button class="header-btn" id="btnHeaderScan">
+            <span>🔍</span>
+            <span>Scansione Avanzata</span>
+          </button>
+          <button class="theme-toggle-btn" id="btnThemeToggle" title="Cambia Tema (Scuro / Chiaro)">
+            <span id="themeToggleIcon">🌙</span>
+            <span id="themeToggleLabel">Scuro</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Scrollable Content Views -->
+      <div class="content-area">
+
+        <!-- VIEW 1: DASHBOARD (Strictly matching the screenshot) -->
+        <section class="view-panel active" id="view-dashboard">
+          <!-- Hero Card -->
+          <div class="hero-card">
+            <div class="hero-left">
+              <div class="hero-status-tags">
+                <span class="tag-badge active-lime">● FLUSSO GUIDATO</span>
+                <span class="tag-badge active-lime">● PROTEZIONE CORE ATTIVA</span>
+              </div>
+
+              <div class="hero-stats-row">
+                <div class="stat-metric">
+                  <span class="stat-label">Tempo Avvio Stimato</span>
+                  <span class="stat-value" id="heroCurrentBoot">15.4s</span>
+                  <span class="stat-sub">Impatto elementi: Medio/Alto</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-metric">
+                  <span class="stat-label">Tempo Obiettivo Ottimizzato</span>
+                  <span class="stat-value lime-accent" id="heroTargetBoot">6.2s / -60%</span>
+                  <span class="stat-sub">Massima reattività di accesso</span>
+                </div>
+              </div>
+
+              <p class="hero-desc">
+                Gestisci e accelera l'avvio del tuo computer con Windows 11. Analizza registri Run/RunOnce, cartelle di avvio, servizi di terze parti e attività pianificate. I file personali, la sicurezza di Windows Defender e l'integrità del kernel sono protetti al 100%.
+              </p>
+
+              <div class="hero-buttons">
+                <button class="btn-lime" id="btnHero1Click">
+                  <span>⚡</span>
+                  <span>1-Clic: Ottimizzazione Sicura</span>
+                </button>
+                <button class="btn-secondary" id="btnHeroScan">
+                  <span>🔄</span>
+                  <span>Nuova Scansione</span>
+                </button>
+                <button class="btn-secondary" id="btnOpenStartupFolder">
+                  <span>📁</span>
+                  <span>Cartella Startup</span>
+                </button>
+                <button class="btn-secondary" id="btnHeroBackup">
+                  <span>💾</span>
+                  <span>Crea Backup Avvio</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Hero Right: Circular Radial Progress Gauge -->
+            <div class="hero-right">
+              <div class="gauge-wrapper">
+                <svg class="gauge-svg" viewBox="0 0 160 160">
+                  <circle class="gauge-track" cx="80" cy="80" r="65"></circle>
+                  <circle class="gauge-progress" id="gaugeCircle" cx="80" cy="80" r="65"></circle>
+                </svg>
+                <div class="gauge-inner-content">
+                  <span class="gauge-pct" id="gaugePct">88%</span>
+                  <span class="gauge-label">Salute Avvio Sistema</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Three Summary Cards Row (01, 02, 03) -->
+          <div class="cards-grid-three">
+            <!-- Card 01 -->
+            <div class="step-card">
+              <div class="step-card-header">
+                <div class="step-title-group">
+                  <span class="step-number">01</span>
+                  <div>
+                    <h3>Rilevamento Elementi Avvio</h3>
+                    <div class="step-subtitle">ANALISI FONTI MULTIPLE</div>
+                  </div>
+                </div>
+                <div class="card-status-badge">
+                  <span class="status-dot"></span>
+                  <span>Pronto</span>
+                </div>
+              </div>
+              <p class="step-desc">
+                Scansione aggregata di cartelle Startup utente/sistema, registri Run/RunOnce (HKCU, HKLM, WoW6432Node), servizi e task di logon.
+              </p>
+              <button class="btn-card-action" data-nav="user-software">Dettagli Software Utente</button>
+            </div>
+
+            <!-- Card 02 -->
+            <div class="step-card">
+              <div class="step-card-header">
+                <div class="step-title-group">
+                  <span class="step-number">02</span>
+                  <div>
+                    <h3>Rating Rischio a Semaforo</h3>
+                    <div class="step-subtitle">VALUTAZIONE IMPATTO</div>
+                  </div>
+                </div>
+                <div class="card-status-badge">
+                  <span class="status-dot"></span>
+                  <span>Analisi Attiva</span>
+                </div>
+              </div>
+              <p class="step-desc">
+                Classificazione euristica a 3 livelli: <strong style="color:var(--accent-green)">Verde</strong> (Sicuro), <strong style="color:var(--accent-yellow)">Giallo</strong> (Attenzione), <strong style="color:var(--accent-red)">Rosso</strong> (Critico Protetto).
+              </p>
+              <button class="btn-card-action highlight" data-nav="risk-matrix">Visualizza Matrice Rischi</button>
+            </div>
+
+            <!-- Card 03 -->
+            <div class="step-card">
+              <div class="step-card-header">
+                <div class="step-title-group">
+                  <span class="step-number">03</span>
+                  <div>
+                    <h3>De-Offuscamento Processi</h3>
+                    <div class="step-subtitle">DEEP INSPECTION & HASH</div>
+                  </div>
+                </div>
+                <div class="card-status-badge">
+                  <span class="status-dot"></span>
+                  <span>Pronto</span>
+                </div>
+              </div>
+              <p class="step-desc">
+                Estrae percorso assoluto, metadati PE (Editore, Prodotto), verifica firma digitale Authenticode e calcola SHA256 con spiegazione estesa.
+              </p>
+              <button class="btn-card-action" data-nav="deobfuscation">Ispeziona Processi</button>
+            </div>
+          </div>
+
+          <!-- Bottom Dual Panels (System Specs & Operation Console) -->
+          <div class="bottom-panels-grid">
+            <!-- Left: System Specs -->
+            <div class="panel-card">
+              <div class="panel-header">
+                <div>
+                  <h3>Riepilogo del Sistema</h3>
+                  <p>Parametri hardware rilevati e requisiti Windows 11</p>
+                </div>
+                <button class="panel-pill-btn" id="btnRefreshSys">Tutti i Parametri</button>
+              </div>
+
+              <table class="specs-table">
+                <tbody>
+                  <tr>
+                    <td class="specs-label">Computer / Modello</td>
+                    <td class="specs-value" id="specModel">Rilevamento...</td>
+                  </tr>
+                  <tr>
+                    <td class="specs-label">Processore (CPU)</td>
+                    <td class="specs-value" id="specCpu">Rilevamento...</td>
+                  </tr>
+                  <tr>
+                    <td class="specs-label">Istruzioni SSE4.2 / POPCNT</td>
+                    <td class="specs-value" id="specInstruction">Supportato</td>
+                  </tr>
+                  <tr>
+                    <td class="specs-label">Memoria RAM</td>
+                    <td class="specs-value" id="specRam">16.0 GB</td>
+                  </tr>
+                  <tr>
+                    <td class="specs-label">Spazio Libero su C:</td>
+                    <td class="specs-value" id="specDisk">107.5 GB liberi su C:</td>
+                  </tr>
+                  <tr>
+                    <td class="specs-label">Edizione Sistema Operativo</td>
+                    <td class="specs-value" id="specOs">Windows 11 Pro 64-bit</td>
+                  </tr>
+                  <tr>
+                    <td class="specs-label">Stato Amministratore (UAC)</td>
+                    <td class="specs-value" id="specAdmin">Attivo / Elevato</td>
+                  </tr>
+                  <tr>
+                    <td class="specs-label">Elementi Avvio Attivi</td>
+                    <td class="specs-value" id="specItemsRatio">0 Abilitati / 0 Totali</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Right: Operation Console -->
+            <div class="terminal-card">
+              <div class="terminal-header">
+                <div class="terminal-dots">
+                  <span class="t-dot red"></span>
+                  <span class="t-dot yellow"></span>
+                  <span class="t-dot green"></span>
+                </div>
+                <span class="terminal-title">Console Operazioni</span>
+                <button class="panel-pill-btn" id="btnClearLog">Pulisci</button>
+              </div>
+              <div class="terminal-body" id="terminalLogs">
+                <!-- Log entries injected dynamically -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 2: SOFTWARE UTENTE (User Applications) -->
+        <section class="view-panel" id="view-user-software">
+          <div class="controls-bar">
+            <div class="search-box">
+              <span class="search-icon">🔍</span>
+              <input type="text" class="search-input" id="searchUserSoftware" placeholder="Cerca applicazione, editore o percorso...">
+            </div>
+            <div class="filter-group">
+              <button class="filter-btn active" data-filter="all">Tutti</button>
+              <button class="filter-btn" data-filter="VERDE">🟢 Sicuro</button>
+              <button class="filter-btn" data-filter="GIALLO">🟡 Attenzione</button>
+              <button class="filter-btn" data-filter="ROSSO">🔴 Critico</button>
+            </div>
+            <div class="filter-group">
+              <button class="filter-btn active" data-state="all">Stato: Tutti</button>
+              <button class="filter-btn" data-state="enabled">Abilitati</button>
+              <button class="filter-btn" data-state="disabled">Disabilitati</button>
+            </div>
+          </div>
+
+          <div class="items-list-container" id="userSoftwareList">
+            <!-- Injected dynamically -->
+          </div>
+        </section>
+
+        <!-- VIEW 3: PROCESSI & SERVIZI (System & Services) -->
+        <section class="view-panel" id="view-system-processes">
+          <div class="controls-bar">
+            <div class="search-box">
+              <span class="search-icon">🔍</span>
+              <input type="text" class="search-input" id="searchSystemProcesses" placeholder="Cerca processo di sistema o servizio...">
+            </div>
+            <div class="filter-group">
+              <button class="filter-btn active" data-filter="all">Tutti</button>
+              <button class="filter-btn" data-filter="VERDE">🟢 Sicuro</button>
+              <button class="filter-btn" data-filter="GIALLO">🟡 Attenzione</button>
+              <button class="filter-btn" data-filter="ROSSO">🔴 Critico (Protetto)</button>
+            </div>
+          </div>
+
+          <div class="items-list-container" id="systemProcessesList">
+            <!-- Injected dynamically -->
+          </div>
+        </section>
+
+        <!-- VIEW 4: ATTIVITÀ PIANIFICATE (Scheduled Tasks) -->
+        <section class="view-panel" id="view-scheduled-tasks">
+          <div class="controls-bar">
+            <div class="search-box">
+              <span class="search-icon">🔍</span>
+              <input type="text" class="search-input" id="searchScheduledTasks" placeholder="Cerca attività pianificata all'accesso...">
+            </div>
+          </div>
+
+          <div class="items-list-container" id="scheduledTasksList">
+            <!-- Injected dynamically -->
+          </div>
+        </section>
+
+        <!-- VIEW 5: ANALISI DI RISCHIO (Traffic Light Matrix) -->
+        <section class="view-panel" id="view-risk-matrix">
+          <div class="cards-grid-three">
+            <!-- Verde -->
+            <div class="step-card" style="border-top: 3px solid var(--accent-green);">
+              <div class="step-card-header">
+                <div>
+                  <h3 style="color:var(--accent-green)">🟢 VERDE (Safe to Disable)</h3>
+                  <div class="step-subtitle">IMPATTO SISTEMA: NULLO</div>
+                </div>
+                <span class="badge badge-safe" id="matrixSafeCount">0 Elementi</span>
+              </div>
+              <p class="step-desc">
+                Applicazioni utente note (Spotify, Discord, Steam, browser helper, updater commerciali). Possono essere disabilitati con totale serenità. Riducono il boot time e liberano fino a 2 GB di RAM all'accesso.
+              </p>
+              <button class="btn-lime" id="btnDisableAllSafe">Disabilita Tutti i Sicuri</button>
+            </div>
+
+            <!-- Giallo -->
+            <div class="step-card" style="border-top: 3px solid var(--accent-yellow);">
+              <div class="step-card-header">
+                <div>
+                  <h3 style="color:var(--accent-yellow)">🟡 GIALLO (Caution)</h3>
+                  <div class="step-subtitle">IMPATTO: ACCESSORI / DRIVER</div>
+                </div>
+                <span class="badge badge-caution" id="matrixCautionCount">0 Elementi</span>
+              </div>
+              <p class="step-desc">
+                Software per periferiche (Razer Synapse, Logitech G HUB, Corsair iCUE), pannelli audio Realtek, sincronizzatori cloud (OneDrive, Dropbox). La disabilitazione non danneggia Windows ma disattiva macro o sync automatica.
+              </p>
+              <button class="btn-card-action" data-nav="user-software">Gestisci con Prudenza</button>
+            </div>
+
+            <!-- Rosso -->
+            <div class="step-card" style="border-top: 3px solid var(--accent-red);">
+              <div class="step-card-header">
+                <div>
+                  <h3 style="color:var(--accent-red)">🔴 ROSSO (Critical)</h3>
+                  <div class="step-subtitle">PROTETTO CON DOPPIA CONFERMA</div>
+                </div>
+                <span class="badge badge-critical" id="matrixCriticalCount">0 Elementi</span>
+              </div>
+              <p class="step-desc">
+                Processi Windows Core, servizi di sicurezza (Windows Defender / Antivirus), driver hardware e storage controller. La disattivazione rischia di provocare schermate blu (BSOD) o mancato avvio. InitControl ne blocca la modifica accidentale.
+              </p>
+              <button class="btn-card-action" style="cursor:not-allowed; opacity:0.6;">🔒 Protetto da Kernel Guard</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 6: DE-OFFUSCAMENTO (Deep Process Inspector) -->
+        <section class="view-panel" id="view-deobfuscation">
+          <div class="panel-card">
+            <div class="panel-header">
+              <div>
+                <h3>Centro di De-Offuscamento & Analisi Hash</h3>
+                <p>Identifica processi sconosciuti, stringhe offuscate, eseguibili senza editore e controlla firme digitali</p>
+              </div>
+            </div>
+
+            <div class="search-box">
+              <span class="search-icon">🔍</span>
+              <input type="text" class="search-input" id="searchDeobfuscate" placeholder="Filtra processi da analizzare in profondità...">
+            </div>
+
+            <div class="items-list-container" id="deobfuscateList">
+              <!-- Injected dynamically -->
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 7: STRUMENTI & BACKUP -->
+        <section class="view-panel" id="view-backup-tools">
+          <div class="cards-grid-three">
+            <div class="step-card">
+              <h3>⚡ Ottimizzazione Rapida 1-Clic</h3>
+              <p class="step-desc">Crea un punto di ripristino automatico e disabilita in un solo passaggio tutti i programmi superflui classificati VERDE.</p>
+              <button class="btn-lime" id="btnTools1Click">Avvia Ottimizzazione 1-Clic</button>
+            </div>
+
+            <div class="step-card">
+              <h3>💾 Crea Backup Manuale</h3>
+              <p class="step-desc">Salva l'esatta configurazione corrente di tutti i registri, servizi e attività in uno snapshot JSON ripristinabile in qualsiasi momento.</p>
+              <button class="btn-secondary" id="btnToolsCreateBackup">Crea Snapshot Ora</button>
+            </div>
+
+            <div class="step-card">
+              <h3>📄 Esporta Report</h3>
+              <p class="step-desc">Genera un report dettagliato con tutti gli elementi rilevati, firme digitali, hash SHA256 e raccomandazioni di sicurezza.</p>
+              <div style="display:flex; gap:8px;">
+                <button class="btn-secondary" id="btnExportJson" style="flex:1;">Esporta JSON</button>
+                <button class="btn-secondary" id="btnExportHtml" style="flex:1;">Report HTML</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Backup Snapshots History -->
+          <div class="panel-card">
+            <div class="panel-header">
+              <div>
+                <h3>Punti di Ripristino (Snapshots)</h3>
+                <p>Cronologia dei backup di sicurezza per annullare qualsiasi modifica</p>
+              </div>
+            </div>
+            <div class="items-list-container" id="backupsList">
+              <!-- Injected dynamically -->
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 8: CONSOLE & LOG COMPLETA -->
+        <section class="view-panel" id="view-console-log">
+          <div class="terminal-card" style="height: 600px;">
+            <div class="terminal-header">
+              <div class="terminal-dots">
+                <span class="t-dot red"></span>
+                <span class="t-dot yellow"></span>
+                <span class="t-dot green"></span>
+              </div>
+              <span class="terminal-title">InitControl Live Operations Terminal</span>
+              <div>
+                <button class="panel-pill-btn" id="btnClearLogFull">Pulisci Log</button>
+                <button class="panel-pill-btn" id="btnExportLog">Salva Log</button>
+              </div>
+            </div>
+            <div class="terminal-body" id="terminalLogsFull" style="height: 100%;">
+              <!-- Injected dynamically -->
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 9: INFORMAZIONI -->
+        <section class="view-panel" id="view-about-info">
+          <div class="panel-card">
+            <div style="display:flex; align-items:center; gap:20px; margin-bottom:20px;">
+              <div style="width:68px; height:68px; flex-shrink:0;">
+                <img src="assets/logo.svg" alt="Logo" style="width:100%; height:100%;">
+              </div>
+              <div>
+                <h2 id="aboutVersionTitle" style="display:flex; align-items:center; gap:10px;">
+                  <span>InitControl</span>
+                  <span class="badge" style="background:rgba(212,248,106,0.15); color:var(--accent-lime); border:1px solid rgba(212,248,106,0.3); font-size:12px; font-weight:600;" id="aboutVersionBadge">v0.1.4</span>
+                </h2>
+                <p style="color:var(--text-muted); font-size:13px; margin-top:4px;">Architettura avanzata per Windows 11 di gestione, analisi e ottimizzazione dell'avvio</p>
+              </div>
+            </div>
+
+            <!-- COPYRIGHT & AUTHORSHIP CARD -->
+            <div class="about-author-card">
+              <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <div style="width:36px; height:36px; border-radius:50%; background:rgba(212,248,106,0.15); display:flex; align-items:center; justify-content:center; color:var(--accent-lime); font-size:18px;">
+                    🛡️
+                  </div>
+                  <div>
+                    <div style="font-size:15px; font-weight:700; color:var(--text-main); letter-spacing:0.2px;">Created by Alex Lignola</div>
+                    <div style="font-size:12px; color:var(--accent-lime); margin-top:2px; font-weight:500;">© 2026 InitControl - All rights reserved.</div>
+                  </div>
+                </div>
+                <span class="badge badge-system" style="font-size:11px;">Release Ufficiale</span>
+              </div>
+
+              <!-- SOCIAL & GITHUB CHANNELS -->
+              <div class="about-links-grid">
+                <a href="https://www.youtube.com/@AngoloInformatico" class="about-link" target="_blank" rel="noopener noreferrer" title="Visita il canale YouTube Angolo Informatico">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:#FF0000;"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                  <span style="font-weight:600;">YouTube: @AngoloInformatico</span>
+                  <span class="about-url">https://www.youtube.com/@AngoloInformatico</span>
+                </a>
+
+                <a href="https://github.com/AngoloInformatico" class="about-link" target="_blank" rel="noopener noreferrer" title="Profilo GitHub Ufficiale">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:var(--text-main);"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                  <span style="font-weight:600;">GitHub: AngoloInformatico</span>
+                  <span class="about-url">https://github.com/AngoloInformatico</span>
+                </a>
+
+                <a href="https://github.com/AngoloInformatico?tab=repositories" class="about-link" target="_blank" rel="noopener noreferrer" title="Tutti i Progetti & Repository Open Source">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent-lime);"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                  <span style="font-weight:600;">GitHub Repositories: Progetti & Repository</span>
+                  <span class="about-url">https://github.com/AngoloInformatico?tab=repositories</span>
+                </a>
+              </div>
+            </div>
+
+            <!-- LICENSE CARD -->
+            <div class="about-license-card">
+              <span class="section-label" style="display:flex; align-items:center; gap:8px; color:var(--text-main); margin-bottom:8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent-lime);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                Licenza Open Source: GNU General Public License v3.0 (GPLv3)
+              </span>
+              <p style="font-size:13px; color:var(--text-muted); line-height:1.6;">
+                InitControl è un software libero rilasciato sotto licenza <strong>GNU General Public License v3.0 (GPLv3)</strong> come specificato nel file <code style="color:var(--accent-lime); background:rgba(212,248,106,0.1); padding:2px 6px; border-radius:4px;">LICENSE</code>. È consentita la copia, redistribuzione e modifica nel rispetto della libertà del software libero.
+              </p>
+            </div>
+
+            <div class="inspector-section">
+              <span class="section-label">Funzionalità Chiave dell'Applicazione</span>
+              <ul style="padding-left: 20px; font-size: 13px; line-height: 1.8; color: var(--text-muted);">
+                <li><strong>Oltre il Task Manager:</strong> Scansione aggregata di HKCU, HKLM, WoW6432Node Run/RunOnce, Startup Folders, Servizi terze parti e Attività Pianificate.</li>
+                <li><strong>Rating a Semaforo:</strong> Separazione in Safe (Verde), Caution (Giallo), Critical (Rosso con Kernel Guard).</li>
+                <li><strong>De-Offuscamento PE:</strong> Estrazione metadati, Editore, Firma Authenticode, SHA256 e intelligence euristica integrata.</li>
+                <li><strong>Doppia Conferma Kernel Guard:</strong> Blocco protettivo contro la disabilitazione accidentale di componenti core di sistema.</li>
+                <li><strong>Ripristino Snapshot:</strong> Cronologia completa dei punti di ripristino per annullare qualsiasi modifica in 1 click.</li>
+                <li><strong>Sincronizzazione Versione:</strong> Tracciamento rigoroso tramite <code>versione.json</code> e metadati PE embedded nell'eseguibile.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ==========================================
+       MODAL 1: DEEP PROCESS INSPECTOR
+       ========================================== -->
+  <div class="modal-overlay" id="modalInspector">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modalInspTitle">🔍 De-Offuscamento & Metadati</h3>
+        <button class="btn-close-modal" id="btnCloseInspModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="inspector-section">
+          <span class="section-label">Spiegazione & Valutazione di Sicurezza</span>
+          <div class="explanation-box" id="modalInspExplanation">
+            Caricamento analisi euristica...
+          </div>
+        </div>
+
+        <div class="inspector-section">
+          <span class="section-label">Metadati Eseguibile (PE Headers)</span>
+          <div class="key-value-grid">
+            <span class="kv-key">Nome Prodotto:</span>
+            <span class="kv-val" id="modalInspProdName">-</span>
+
+            <span class="kv-key">Editore / Azienda:</span>
+            <span class="kv-val" id="modalInspCompany">-</span>
+
+            <span class="kv-key">Firma Digitale:</span>
+            <span class="kv-val" id="modalInspSignature">-</span>
+
+            <span class="kv-key">Versione File:</span>
+            <span class="kv-val" id="modalInspVersion">-</span>
+
+            <span class="kv-key">Architettura & Sub:</span>
+            <span class="kv-val" id="modalInspArch">-</span>
+
+            <span class="kv-key">Dimensione File:</span>
+            <span class="kv-val" id="modalInspSize">-</span>
+
+            <span class="kv-key">Data Modifica:</span>
+            <span class="kv-val" id="modalInspDate">-</span>
+
+            <span class="kv-key">Percorso Assoluto:</span>
+            <span class="kv-val" id="modalInspPath">-</span>
+
+            <span class="kv-key">Argomenti di Avvio:</span>
+            <span class="kv-val" id="modalInspArgs">-</span>
+
+            <span class="kv-key">Hash SHA256:</span>
+            <span class="kv-val" id="modalInspSha256" style="font-size:11px; color:var(--accent-lime);">-</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <a class="btn-secondary" id="modalInspGoogle" href="#" target="_blank">Cerca su Google</a>
+        <a class="btn-secondary" id="modalInspVt" href="#" target="_blank">Verifica su VirusTotal</a>
+        <button class="btn-lime" id="modalInspCloseBtn">Chiudi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL 2: CRITICAL (ROSSO) CONFIRMATION
+       ========================================== -->
+  <div class="modal-overlay" id="modalCriticalConfirm">
+    <div class="modal-box" style="max-width: 500px; border-color: var(--accent-red);">
+      <div class="modal-header" style="border-bottom-color: rgba(255, 23, 68, 0.3);">
+        <h3 style="color: var(--accent-red);">⚠️ Conferma Disabilitazione Critica</h3>
+        <button class="btn-close-modal" id="btnCloseCriticalModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; gap:14px; align-items:flex-start;">
+          <div style="font-size:32px; color:var(--accent-red);">🛡️</div>
+          <div>
+            <h4 id="criticalItemName" style="color:var(--text-main); margin-bottom:6px;">Processo Core</h4>
+            <p style="font-size:13px; line-height:1.5; color:var(--text-muted);" id="criticalItemWarning">
+              Questo elemento appartiene ai componenti fondamentali di Windows o ai servizi di sicurezza (Defender). Disabilitarlo potrebbe rendere il sistema instabile, causare schermate blu (BSOD) o impedire il corretto riavvio del PC.
+            </p>
+          </div>
+        </div>
+
+        <div style="background: rgba(255, 23, 68, 0.1); border: 1px solid rgba(255, 23, 68, 0.3); padding: 12px; border-radius: var(--radius-sm); margin-top: 10px;">
+          <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:#ff8a80; cursor:pointer;">
+            <input type="checkbox" id="chkCriticalConfirm">
+            <span>Comprendo i rischi e intendo procedere ugualmente.</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="btnCancelCritical">Annulla</button>
+        <button class="btn-card-action" id="btnProceedCritical" style="background:var(--accent-red); color:#fff; border:none; opacity:0.5; pointer-events:none;">Conferma Disabilitazione</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
