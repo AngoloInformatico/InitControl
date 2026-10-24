@@ -22,6 +22,25 @@ def _make_stable_id(prefix: str, key_str: str) -> str:
     h = hashlib.md5(key_str.encode("utf-8", errors="ignore")).hexdigest()[:16]
     return f"{prefix}_{h}"
 
+
+_LAST_SCAN_CACHE = None
+
+
+def get_last_scan_cache() -> dict | None:
+    global _LAST_SCAN_CACHE
+    return _LAST_SCAN_CACHE
+
+
+def update_cached_item_state(item_id: str, new_state: bool):
+    global _LAST_SCAN_CACHE
+    if not _LAST_SCAN_CACHE:
+        return
+    for coll_name in ["all_items", "user_software", "system_processes"]:
+        for item in _LAST_SCAN_CACHE.get(coll_name, []):
+            if item.get("id") == item_id or item.get("name") == item_id or item.get("service_name") == item_id:
+                item["enabled"] = new_state
+
+
 REGISTRY_SCAN_TARGETS = [
     {
         "root": winreg.HKEY_CURRENT_USER,
@@ -78,16 +97,38 @@ def _read_startup_approved_map(root, subpath, view=0) -> dict:
     approved = {}
     if not subpath:
         return approved
-    try:
-        flags = winreg.KEY_READ | view
-        with winreg.OpenKey(root, subpath, 0, flags) as key:
-            num_values = winreg.QueryInfoKey(key)[1]
-            for i in range(num_values):
-                name, val, vtype = winreg.EnumValue(key, i)
-                if isinstance(val, (bytes, bytearray)) and len(val) > 0:
-                    approved[name.lower()] = (val[0] == 2)
-    except Exception:
-        pass
+    # StartupApproved is always located in 64-bit registry (Explorer / TaskManager)
+    # Check primary root first (using 64-bit key view to avoid WOW64 redirection)
+    for try_view in [winreg.KEY_WOW64_64KEY, 0]:
+        try:
+            flags = winreg.KEY_READ | try_view
+            with winreg.OpenKey(root, subpath, 0, flags) as key:
+                num_values = winreg.QueryInfoKey(key)[1]
+                for i in range(num_values):
+                    name, val, vtype = winreg.EnumValue(key, i)
+                    if isinstance(val, (bytes, bytearray)) and len(val) > 0:
+                        # Even first byte (0x02, 0x06) = Enabled; Odd first byte (0x01, 0x03, 0x07) = Disabled
+                        approved[name.lower()] = ((val[0] & 1) == 0)
+            if approved:
+                break
+        except Exception:
+            pass
+
+    # If root was HKLM, also check HKCU for per-user Task Manager overrides
+    if root == winreg.HKEY_LOCAL_MACHINE:
+        for try_view in [winreg.KEY_WOW64_64KEY, 0]:
+            try:
+                flags = winreg.KEY_READ | try_view
+                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, subpath, 0, flags) as key:
+                    num_values = winreg.QueryInfoKey(key)[1]
+                    for i in range(num_values):
+                        name, val, vtype = winreg.EnumValue(key, i)
+                        if isinstance(val, (bytes, bytearray)) and len(val) > 0:
+                            approved[name.lower()] = ((val[0] & 1) == 0)
+                break
+            except Exception:
+                pass
+
     return approved
 
 
@@ -289,11 +330,11 @@ def scan_services() -> list[dict]:
 
 def scan_scheduled_tasks() -> list[dict]:
     items = []
-    # Fast query: non-Microsoft tasks and user logon tasks
+    # Fast query: non-Microsoft tasks (both enabled and disabled)
     ps_cmd = (
         "Get-ScheduledTask | "
-        "Where-Object { ($_.TaskPath -notmatch '^\\\\Microsoft\\\\Windows\\\\') -and ($_.State -ne 'Disabled') } | "
-        "Select-Object -First 25 TaskName, TaskPath, State, Author, Description, "
+        "Where-Object { $_.TaskPath -notmatch '^\\\\Microsoft\\\\Windows\\\\' } | "
+        "Select-Object TaskName, TaskPath, State, @{N='StateStr';E={$_.State.ToString()}}, Author, Description, "
         "@{N='Exec';E={$_.Actions.Execute}}, @{N='Args';E={$_.Actions.Arguments}} | "
         "ConvertTo-Json -Compress"
     )
@@ -303,7 +344,7 @@ def scan_scheduled_tasks() -> list[dict]:
             ["powershell", "-NoProfile", "-Command", ps_cmd],
             capture_output=True,
             text=True,
-            timeout=5
+            timeout=8
         )
         if res.returncode == 0 and res.stdout.strip():
             raw_data = json.loads(res.stdout)
@@ -315,8 +356,13 @@ def scan_scheduled_tasks() -> list[dict]:
                 task_path = t.get("TaskPath", "\\")
                 exec_cmd = t.get("Exec") or ""
                 args = t.get("Args") or ""
-                state_str = str(t.get("State", ""))
-                is_enabled = (state_str not in ["Disabled", "0"])
+                state_str = str(t.get("StateStr") or t.get("State", "")).strip()
+                raw_state = t.get("State")
+                # TaskState: 1 = Disabled, 0 = Unknown, 3 = Ready, 4 = Running, 2 = Queued
+                is_enabled = (
+                    state_str.lower() not in ["disabled", "0", "1"] 
+                    and raw_state not in [0, 1]
+                )
 
                 full_cmd = f"{exec_cmd} {args}".strip() if exec_cmd else name
                 inspection = inspect_and_deobfuscate_item(exec_cmd or name, item_name=name)
@@ -331,7 +377,7 @@ def scan_scheduled_tasks() -> list[dict]:
                     "filename": inspection["filename"],
                     "source_type": "Task",
                     "source_location": f"{task_path}{name}",
-                    "source_label": "Attività Pianificata",
+                    "source_label": f"Attività Pianificata ({state_str or ('Abilitata' if is_enabled else 'Disabilitata')})",
                     "task_name": name,
                     "task_path": task_path,
                     "author": t.get("Author", ""),
@@ -374,7 +420,7 @@ def scan_all_startup_sources() -> dict:
     efficiency_score = max(25, min(98, 98 - penalty))
     est_boot_saved_sec = sum(1.2 for i in user_software if i.get("enabled") and i["risk"] == "VERDE")
 
-    return {
+    scan_result = {
         "summary": {
             "total_items": len(all_items),
             "user_software_count": len(user_software),
@@ -395,3 +441,6 @@ def scan_all_startup_sources() -> dict:
         "user_software": user_software,
         "system_processes": system_processes
     }
+    global _LAST_SCAN_CACHE
+    _LAST_SCAN_CACHE = scan_result
+    return scan_result

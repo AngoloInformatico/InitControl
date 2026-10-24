@@ -7,7 +7,7 @@
 
 <!-- TECH_BADGES_START -->
 [![Platform](https://img.shields.io/badge/Platform-Windows%2011%20%7C%2010%20(x64)-0078D4?logo=windows&logoColor=white)](https://github.com/AngoloInformatico)
-[![InitControl Sources](https://img.shields.io/badge/InitControl_Sources-v0.1.7_Build_%238-D4F86A?logo=powershell&logoColor=black)](versione.json)
+[![InitControl Sources](https://img.shields.io/badge/InitControl_Sources-v0.1.8_Build_%239-D4F86A?logo=powershell&logoColor=black)](versione.json)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Manifesto](https://img.shields.io/badge/Manifesto-Leggi%20il%20Documento-D4F86A?logo=readme&logoColor=black)](Manifesto.md)
 <br/>
@@ -121,7 +121,7 @@ Il modulo di de-offuscamento analizza i file eseguibili (`.exe`, `.dll`) tramite
 <!-- TECH_TABLE_START -->
 | Componente | Software / Libreria | Versione Attiva | Ruolo Tecnologico |
 | :--- | :--- | :---: | :--- |
-| **Sorgenti InitControl** | InitControl Core | `v0.1.7 (Build #8)` | Motore di scansione, classificazione ed euristica |
+| **Sorgenti InitControl** | InitControl Core | `v0.1.8 (Build #9)` | Motore di scansione, classificazione ed euristica |
 | **Linguaggio Base** | Python | `3.14.7` | Runtime ed elaborazione nativa Windows 64-bit |
 | **Web Framework & API** | Flask | `3.0.2` | Server HTTP locale ad alte prestazioni e routing API |
 | **Desktop Host GUI** | pywebview | `6.2.1` | Finestra desktop nativa accelerata GPU Edge WebView2 |

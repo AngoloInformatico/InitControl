@@ -14,25 +14,37 @@ import subprocess
 from pathlib import Path
 from datetime import datetime
 
-from core.scanner import scan_all_startup_sources
+from core.scanner import scan_all_startup_sources, get_last_scan_cache, update_cached_item_state
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 BACKUP_DIR = BASE_DIR / "backups"
 BACKUP_DIR.mkdir(exist_ok=True)
 
 
-def toggle_item_state(item_id: str, new_state: bool, confirmed_critical: bool = False) -> dict:
+def toggle_item_state(item_id: str, new_state: bool, confirmed_critical: bool = False, item_hint: dict = None) -> dict:
     """
     Enables or disables an item based on its source type and ID.
     If the item is rated ROSSO (Critical), requires confirmed_critical=True.
     """
-    scan = scan_all_startup_sources()
-    all_items = scan["all_items"]
+    target_item = None
+    cache = get_last_scan_cache()
+    if cache and "all_items" in cache:
+        target_item = next(
+            (i for i in cache["all_items"] if i.get("id") == item_id or i.get("name") == item_id or i.get("service_name") == item_id),
+            None
+        )
 
-    target_item = next(
-        (i for i in all_items if i.get("id") == item_id or i.get("name") == item_id or i.get("service_name") == item_id),
-        None
-    )
+    if not target_item:
+        scan = scan_all_startup_sources()
+        all_items = scan.get("all_items", [])
+        target_item = next(
+            (i for i in all_items if i.get("id") == item_id or i.get("name") == item_id or i.get("service_name") == item_id),
+            None
+        )
+
+    if not target_item and item_hint and isinstance(item_hint, dict) and item_hint.get("id") == item_id:
+        target_item = item_hint
+
     if not target_item:
         return {"success": False, "error": f"Elemento con ID '{item_id}' non trovato."}
 
@@ -55,8 +67,8 @@ def toggle_item_state(item_id: str, new_state: bool, confirmed_critical: bool = 
                 "HKLM": winreg.HKEY_LOCAL_MACHINE
             }
             root_key = root_map.get(target_item.get("reg_root"), winreg.HKEY_CURRENT_USER)
-            subpath = target_item.get("reg_subpath")
-            val_name = target_item.get("reg_value_name")
+            subpath = target_item.get("reg_subpath", "")
+            val_name = target_item.get("reg_value_name", "")
 
             # Native Task Manager StartupApproved mechanism
             approved_subpath = (
@@ -64,17 +76,45 @@ def toggle_item_state(item_id: str, new_state: bool, confirmed_critical: bool = 
                 if "WOW6432Node" not in subpath
                 else r"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run32"
             )
+            # 0x02 = Enabled, 0x03 = Disabled by Task Manager
             val_bytes = b"\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" if new_state else b"\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
 
-            with winreg.CreateKeyEx(root_key, approved_subpath, 0, winreg.KEY_SET_VALUE) as key:
-                winreg.SetValueEx(key, val_name, 0, winreg.REG_BINARY, val_bytes)
+            written = False
+            last_err = ""
+            try:
+                # Write to target root using KEY_WOW64_64KEY to ensure 64-bit registry access
+                with winreg.CreateKeyEx(root_key, approved_subpath, 0, winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY) as key:
+                    winreg.SetValueEx(key, val_name, 0, winreg.REG_BINARY, val_bytes)
+                written = True
+            except PermissionError:
+                # Fallback to HKCU if HKLM requires elevated admin rights
+                try:
+                    with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, approved_subpath, 0, winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY) as key:
+                        winreg.SetValueEx(key, val_name, 0, winreg.REG_BINARY, val_bytes)
+                    written = True
+                except Exception as e_user:
+                    last_err = str(e_user)
+            except Exception as e:
+                last_err = str(e)
 
-            return {
-                "success": True,
-                "id": item_id,
-                "enabled": new_state,
-                "message": f"Elemento '{target_item['name']}' {'abilitato' if new_state else 'disabilitato'} con successo nel registro."
-            }
+            # If writing to HKLM succeeded, also sync HKCU so no conflicting user-override remains
+            if written and root_key == winreg.HKEY_LOCAL_MACHINE:
+                try:
+                    with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, approved_subpath, 0, winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY) as key:
+                        winreg.SetValueEx(key, val_name, 0, winreg.REG_BINARY, val_bytes)
+                except Exception:
+                    pass
+
+            if written:
+                update_cached_item_state(item_id, new_state)
+                return {
+                    "success": True,
+                    "id": item_id,
+                    "enabled": new_state,
+                    "message": f"Elemento '{target_item['name']}' {'abilitato' if new_state else 'disabilitato'} con successo nel registro."
+                }
+            else:
+                return {"success": False, "error": f"Errore scrittura registro: {last_err}"}
 
         # 2. Startup Folder items
         elif source_type == "StartupFolder":
@@ -105,6 +145,7 @@ def toggle_item_state(item_id: str, new_state: bool, confirmed_critical: bool = 
                     except Exception:
                         pass
 
+                update_cached_item_state(item_id, new_state)
             return {
                 "success": True,
                 "id": item_id,
@@ -217,6 +258,7 @@ def toggle_item_state(item_id: str, new_state: bool, confirmed_critical: bool = 
                         pass
 
                 state_label = "ABILITATO (Avvio Automatico)" if new_state else "DISABILITATO (Arrestato)"
+                update_cached_item_state(item_id, new_state)
                 return {
                     "success": True,
                     "id": item_id,
@@ -231,20 +273,59 @@ def toggle_item_state(item_id: str, new_state: bool, confirmed_critical: bool = 
 
         # 4. Scheduled Task
         elif source_type == "Task":
-            task_name = target_item.get("task_name")
+            task_name = target_item.get("task_name") or target_item.get("name")
             task_path = target_item.get("task_path", "\\")
-            cmd_action = "Enable-ScheduledTask" if new_state else "Disable-ScheduledTask"
-            ps_cmd = f"{cmd_action} -TaskName '{task_name}' -TaskPath '{task_path}'"
-            res = subprocess.run(["powershell", "-NoProfile", "-Command", ps_cmd], capture_output=True, text=True, timeout=5)
-            if res.returncode == 0:
+            full_task_name = f"{task_path.rstrip('\\')}\\{task_name}" if task_path != "\\" else f"\\{task_name}"
+
+            task_configured = False
+            last_err = ""
+
+            # Method 1: native schtasks.exe (ultra-fast, ~30ms, handles already disabled states smoothly)
+            cmd_action_sch = "/ENABLE" if new_state else "/DISABLE"
+            try:
+                res_sch = subprocess.run(
+                    ["schtasks.exe", "/CHANGE", "/TN", full_task_name, cmd_action_sch],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                if res_sch.returncode == 0:
+                    task_configured = True
+                else:
+                    last_err = (res_sch.stderr or res_sch.stdout).strip()
+            except Exception as e_sch:
+                last_err = str(e_sch)
+
+            # Method 2: PowerShell Enable-ScheduledTask / Disable-ScheduledTask fallback
+            if not task_configured:
+                try:
+                    cmd_action_ps = "Enable-ScheduledTask" if new_state else "Disable-ScheduledTask"
+                    safe_name = task_name.replace("'", "''")
+                    safe_path = task_path.replace("'", "''")
+                    ps_cmd = f"{cmd_action_ps} -TaskName '{safe_name}' -TaskPath '{safe_path}'"
+                    res_ps = subprocess.run(
+                        ["powershell", "-NoProfile", "-Command", ps_cmd],
+                        capture_output=True,
+                        text=True,
+                        timeout=8
+                    )
+                    if res_ps.returncode == 0:
+                        task_configured = True
+                    else:
+                        last_err = (res_ps.stderr or res_ps.stdout).strip()
+                except Exception as e_ps:
+                    last_err = str(e_ps)
+
+            if task_configured:
+                update_cached_item_state(item_id, new_state)
                 return {
                     "success": True,
                     "id": item_id,
                     "enabled": new_state,
-                    "message": f"Attività pianificata '{task_name}' {'abilitata' if new_state else 'disabilitata'}."
+                    "message": f"Attività pianificata '{task_name}' {'abilitata' if new_state else 'disabilitata'} con successo."
                 }
             else:
-                return {"success": False, "error": f"Errore modifica attività: {res.stderr}"}
+                return {"success": False, "error": f"Errore modifica attività: {last_err}"}
 
     except Exception as e:
         return {"success": False, "error": f"Eccezione durante la modifica: {str(e)}"}

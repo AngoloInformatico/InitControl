@@ -418,7 +418,9 @@ function bindCardInteractions(container) {
 // ITEM TOGGLE & CRITICAL MODAL HANDLER
 // ========================================================
 async function handleItemToggle(itemId, newState, checkboxEl) {
-  const item = state.scanData?.all_items.find(i => i.id === itemId);
+  const item = state.scanData?.all_items?.find(i => i.id === itemId) ||
+               state.scanData?.user_software?.find(i => i.id === itemId) ||
+               state.scanData?.system_processes?.find(i => i.id === itemId);
   if (!item) return;
 
   // Intercept ROSSO (Critical) items to enforce double confirmation
@@ -434,13 +436,18 @@ async function handleItemToggle(itemId, newState, checkboxEl) {
 
 async function executeToggle(itemId, newState, checkboxEl, confirmedCritical) {
   try {
+    const itObj = state.scanData?.all_items?.find(i => i.id === itemId) ||
+                  state.scanData?.user_software?.find(i => i.id === itemId) ||
+                  state.scanData?.system_processes?.find(i => i.id === itemId);
+
     const res = await fetch("/api/toggle", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: itemId,
         enabled: newState,
-        confirmed_critical: confirmedCritical
+        confirmed_critical: confirmedCritical,
+        item_hint: itObj || null
       })
     });
     const result = await res.json();
@@ -449,15 +456,24 @@ async function executeToggle(itemId, newState, checkboxEl, confirmedCritical) {
       addLog(result.message, "success");
       showToast(result.message, "success");
 
-      // Update state locally
-      const it = state.scanData.all_items.find(i => i.id === itemId);
-      if (it) it.enabled = newState;
+      // Update state locally across all collections
+      if (state.scanData) {
+        const updateInList = (list) => {
+          if (!list) return;
+          const found = list.find(i => i.id === itemId);
+          if (found) found.enabled = newState;
+        };
+        updateInList(state.scanData.all_items);
+        updateInList(state.scanData.user_software);
+        updateInList(state.scanData.system_processes);
+      }
 
       // Recalculate summary & gauge
       recalculateStats();
     } else if (result.requires_confirmation) {
       checkboxEl.checked = !newState;
-      const it = state.scanData.all_items.find(i => i.id === itemId);
+      const it = state.scanData?.all_items?.find(i => i.id === itemId) ||
+                 state.scanData?.user_software?.find(i => i.id === itemId);
       openCriticalConfirmModal(it, newState, checkboxEl);
     } else {
       checkboxEl.checked = !newState;
@@ -472,8 +488,9 @@ async function executeToggle(itemId, newState, checkboxEl, confirmedCritical) {
 }
 
 function recalculateStats() {
-  const all = state.scanData.all_items;
-  const user = state.scanData.user_software;
+  if (!state.scanData) return;
+  const all = state.scanData.all_items || [];
+  const user = state.scanData.user_software || [];
 
   const enabledCount = all.filter(i => i.enabled).length;
   state.scanData.summary.enabled_count = enabledCount;
@@ -483,6 +500,7 @@ function recalculateStats() {
                   (user.filter(i => i.enabled && i.risk === "GIALLO").length * 3);
   const score = Math.max(25, Math.min(98, 98 - penalty));
   state.scanData.summary.efficiency_score = score;
+  state.scanData.summary.estimated_saved_seconds = Math.round(user.filter(i => i.enabled && i.risk === "VERDE").length * 1.2 * 10) / 10;
 
   renderDashboardSummary(state.scanData.summary);
 }

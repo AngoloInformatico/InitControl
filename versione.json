@@ -1,9 +1,9 @@
 {
-  "version": "0.1.7",
-  "build": 8,
+  "version": "0.1.8",
+  "build": 9,
   "created_at": "2026-10-23T11:25:00",
   "channel": "Release",
-  "last_updated": "2026-10-23T14:30:43.206255",
-  "last_build_at": "2026-10-23T14:22:04.353263",
-  "last_source_hash": "8b22bc7b1b62dd61"
+  "last_updated": "2026-10-24T10:20:08.451488",
+  "last_build_at": "2026-10-24T10:20:59.960198",
+  "last_source_hash": "f0133495fbbcc07d"
 }

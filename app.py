@@ -90,11 +90,12 @@ def api_toggle():
     item_id = payload.get("id")
     enabled = payload.get("enabled", True)
     confirmed_critical = payload.get("confirmed_critical", False)
+    item_hint = payload.get("item_hint")
 
     if not item_id:
         return jsonify({"success": False, "error": "ID elemento mancante."}), 400
 
-    result = toggle_item_state(item_id, enabled, confirmed_critical=confirmed_critical)
+    result = toggle_item_state(item_id, enabled, confirmed_critical=confirmed_critical, item_hint=item_hint)
     return jsonify(result)
 
 
